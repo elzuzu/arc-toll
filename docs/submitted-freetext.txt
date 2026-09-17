@@ -1,0 +1,38 @@
+Verbatim archive of the two hackathon-form fields that had no prepared source in this repository and
+were written on the spot. Recorded so the submission can be checked against something rather than
+against memory.
+
+BUIDL 48827, submitted to Arc Microgrants on 2026-09-17, under review.
+
+================================================================================
+FIELD: "In two sentences, what does your project do?"
+================================================================================
+ArcToll is a guard that a router calls inside its own transaction: it reads a pool's fee on-chain and reverts before a swap through a pool that would take too much can execute. It also prices that loss in native 18-decimal USDC, a dollar figure with no oracle in it, and refuses to quote a pool whose fee a hook sets at swap time.
+
+================================================================================
+FIELD: "Anything else we should see?"  (optional)
+================================================================================
+Verify it yourself:
+
+cast call 0x2fac07dec284a0c453ec15aa856767cd5b0d74e4 "toll(address)(uint24,bool)" \
+  0xd945caee4635bcd7fb8a9fa74dc1d0c4c1472782 --rpc-url https://rpc.mainnet.arc.io
+git clone https://github.com/elzuzu/arc-toll && cd arc-toll/contracts && forge test   # 21 tests
+
+Deploy tx 0x36153de77f22c9d7783d629aae5ad32e818305e0bf9f9277fe13f418c136fad4, 336,430 gas (0.0067286 USDC at 20 gwei). 21 tests, including fork tests against live Arc pools.
+
+================================================================================
+NOTES ON FIDELITY
+================================================================================
+The second field reproduces the commands from README's "Verify it yourself" block verbatim, but
+without the markdown code fences or the heading, and with a "Verify it yourself:" line added. The
+form field is plain text, where those markers would have appeared literally.
+
+The 960-character answer was not written on the spot: it is docs/arc-usage-960.txt, entered byte for
+byte and checked before submission by reading the value back out of the DOM — 933 characters, and a
+rolling hash matching the local file.
+
+Two dropdowns needed a second attempt. "Had you deployed to Arc before this project?" first landed
+on `Testnet` because the list animates as it opens, so coordinates read from an earlier screenshot
+no longer pointed at the intended row. Selecting by element reference set `Mainnet`, and both that
+menu and the grant question were read back from the DOM as `Mainnet` and `No` immediately before
+submitting.
