@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ArcToll</title>
+<style>
+ :root{--bg:#fbfaf8;--fg:#1a1917;--muted:#6b6862;--line:#e3e0da;--card:#fff;--accent:#a8341f;--ok:#0f6f4c;
+   --mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+ @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14120f;--fg:#ece9e3;--muted:#9a958b;
+   --line:#2c2924;--card:#1b1815;--accent:#ff8a6a;--ok:#54d3a4}}
+ :root[data-theme="dark"]{--bg:#14120f;--fg:#ece9e3;--muted:#9a958b;--line:#2c2924;--card:#1b1815;--accent:#ff8a6a;--ok:#54d3a4}
+ *{box-sizing:border-box} body{margin:0;padding:0 16px 64px;background:var(--bg);color:var(--fg);
+   font:16px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+ main{max-width:880px;margin:0 auto} header{padding:56px 0 8px}
+ h1{font-size:clamp(2rem,6vw,3rem);margin:0 0 8px;letter-spacing:-.02em}
+ .lede{color:var(--muted);font-size:1.05rem;margin:0;max-width:60ch}
+ .chip{display:inline-block;font:600 12px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;
+   color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:6px 11px;margin-bottom:20px}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:28px 0}
+ code{font-family:var(--mono);font-size:.94em}
+ table{width:100%;border-collapse:collapse;margin-top:8px}
+ th,td{text-align:right;padding:10px 8px;border-bottom:1px solid var(--line)}
+ th:first-child,td:first-child{text-align:left}
+ th{font:600 11px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+ td{font-family:var(--mono);font-size:.88rem}
+ .bad{color:var(--accent);font-weight:600} .good{color:var(--ok)}
+ .status{color:var(--muted);font-size:.85rem;margin-top:14px;font-family:var(--mono)}
+ a{color:var(--ok)} footer{margin-top:44px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:20px}
+ .wrap{overflow-x:auto}
+</style>
+</head>
+<body><main>
+ <header>
+  <div class="chip">Arc Mainnet · chain 5042</div>
+  <h1>ArcToll</h1>
+  <p class="lede">A guard that refuses a swap through a pool that would take too much — before it executes.</p>
+ </header>
+
+ <div class="card">
+  <p style="margin:0 0 10px"><strong>A pool's fee can move.</strong> <code>fee()</code> is immutable on a
+   Uniswap V3 pool and every tool assumes so. A live Arc pool presenting that exact interface answered
+   <strong>400</strong> at block 21288698 and <strong>450</strong> at 21308698, on the same day.</p>
+  <p style="margin:0;color:var(--muted)">That is why this is a guard and not a list. A published figure can be
+   raised before the swap it was meant to protect, so the check is only worth anything in the same transaction
+   as the trade. Every number below is read from the deployed contract right now, in your browser.</p>
+ </div>
+
+ <div class="wrap"><table>
+  <thead><tr><th>Pool</th><th>Toll</th><th>On 1,000 USDC</th><th>Passes 0.3% bound</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="4" style="text-align:center;color:var(--muted)">reading the chain…</td></tr></tbody>
+ </table></div>
+ <p class="status" id="status"></p>
+
+ <footer>
+  Guard <a id="ex" href="https://explorer.arc.io/address/0x2fac07dec284a0c453ec15aa856767cd5b0d74e4">0x2fac07de…74e4</a>
+  · <a href="https://github.com/elzuzu/arc-toll">source</a><br><br>
+  A <em>dynamic</em> toll is not a low one. Uniswap V4 marks such pools with <code>0x800000</code>; masking that
+  flag off leaves zero, so a naive guard calls the most dangerous pool on the chain free. This one refuses to
+  quote a figure at all.
+ </footer>
+</main>
+<script type="module">
+const RPCS=['https://rpc.mainnet.arc.io','https://rpc.drpc.mainnet.arc.io','https://rpc.quicknode.mainnet.arc.io'];
+const GUARD='0x2fac07dec284a0c453ec15aa856767cd5b0d74e4';
+const SEL_TOLL='0x4067ce9f', SEL_ON='0x6a108c15';
+const POOLS=[
+ {a:'0x82916bee18fcef517b26c72d7cb5f13694e1db41',n:'cirBTC / USDC — 0.01% tier'},
+ {a:'0xd945caee4635bcd7fb8a9fa74dc1d0c4c1472782',n:'cirBTC / USDC — the one whose fee moves'},
+ {a:'0x6a3bacaa6493734c1ac221ebf42cf530a96c1e02',n:'ARGUS / USDC — 1% tier'},
+ {a:'0x162df51c504e7b8321e07387932f333d9be16a72',n:'TOLLY / USDC'},
+ {a:'0x64d77c65a5cbd728d891140fd5c30e07d21ee65b',n:'CRCL / USDC'},
+ {a:'0x3600000000000000000000000000000000000000',n:'the USDC predeploy — not a pool at all'},
+];
+const pad=(a)=>a.slice(2).padStart(64,'0');
+async function rpc(m,p){let last;for(const u of RPCS){try{
+ const r=await fetch(u,{method:'POST',headers:{'content-type':'application/json'},
+  body:JSON.stringify({jsonrpc:'2.0',id:1,method:m,params:p})});
+ const j=await r.json(); if(j.error) return {error:j.error}; return {result:j.result};
+}catch(e){last=e}} throw last;}
+/** Format a native-denominated bigint (18 decimals) without floating point. */
+const fmt=(v,places)=>{const u=10n**18n;return `${v/u}.${(v%u).toString().padStart(18,'0').slice(0,places)}`};
+async function load(){
+ const rows=document.getElementById('rows'), status=document.getElementById('status');
+ try{
+  const out=[];
+  for(const p of POOLS){
+   const t=await rpc('eth_call',[{to:GUARD,data:SEL_TOLL+pad(p.a)},'latest']);
+   if(t.error){out.push({...p,refused:true});continue}
+   const pips=Number(BigInt('0x'+t.result.slice(2,66)));
+   const dynamic=BigInt('0x'+t.result.slice(66,130))!==0n;
+   let loss=null;
+   if(!dynamic){
+    const amt=(1000n*10n**18n).toString(16).padStart(64,'0');
+    const l=await rpc('eth_call',[{to:GUARD,data:SEL_ON+pad(p.a)+amt},'latest']);
+    if(!l.error) loss=BigInt(l.result);
+   }
+   out.push({...p,pips,dynamic,loss});
+  }
+  rows.innerHTML=out.map(r=>{
+   if(r.refused) return `<tr><td>${r.n}</td><td class="good">refused</td><td colspan="2" style="color:var(--muted)">not a fee source — the guard reverts rather than calling it free</td></tr>`;
+   if(r.dynamic) return `<tr><td>${r.n}</td><td class="bad">dynamic</td><td class="bad">unknowable</td><td class="bad">no</td></tr>`;
+   const pct=(r.pips/10000).toFixed(r.pips<10000?3:1);
+   const ok=r.pips<3000;
+   return `<tr><td>${r.n}</td><td class="${ok?'good':'bad'}">${pct}%<span style="color:var(--muted)"> (${r.pips.toLocaleString('en-US')} pips)</span></td>`+
+    `<td>${r.loss===null?'—':fmt(r.loss,4)+' USDC'}</td><td class="${ok?'good':'bad'}">${ok?'yes':'no'}</td></tr>`;
+  }).join('');
+  const h=await rpc('eth_blockNumber',[]);
+  status.textContent=`read live at block #${Number(h.result).toLocaleString('en-US')} — refresh to re-read`;
+ }catch(e){
+  rows.innerHTML=`<tr><td colspan="4" style="text-align:center;color:var(--muted)">could not reach Arc: ${e.message}</td></tr>`;
+  status.textContent='retrying when this tab returns to the foreground';
+  const again=()=>{if(!document.hidden) load()};
+  document.addEventListener('visibilitychange',again,{once:true});
+  window.addEventListener('online',again,{once:true});
+ }
+}
+load();
+</script></body></html>

@@ -1,0 +1,15 @@
+{
+  "name": "arc-toll",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A guard that refuses a swap through a pool that would take too much, before it executes.",
+  "license": "MIT",
+  "scripts": {
+    "build": "cd contracts && forge build",
+    "test": "cd contracts && forge test",
+    "deploy": "node scripts/deploy.mjs",
+    "scan": "node scripts/scan-tolls.mjs"
+  },
+  "dependencies": { "viem": "^2.56.5" }
+}
