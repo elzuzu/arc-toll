@@ -1,0 +1,24 @@
+Solo builder, handle elzuzu. Third distinct submission, alongside ArcPay (BUIDL 48819, a pay-per-call
+and escrow rail) and ArcMeter (BUIDL 48824, gas costs measured and published in dollars). This one is
+neither: it is a guard a router calls in its own transaction path.
+
+How it was chosen, since the process is part of the evidence. Seven candidates were scored against
+this programme's criteria, with an already-built project injected as a control — it correctly
+collapsed on distinctness, which showed the scoring measured something rather than agreeing with its
+author. The first ranking crowned a technically elegant non-problem: a vault refusing a truncation
+bounded under 0.000001 USDC. A second pass asking whether the problem was real inverted the ranking.
+
+The design then changed before a line was written. A registry scored 0.9/3 on "prevents the harm
+directly" against 2.8/3 for a guard, because a list only helps someone who remembers to read it.
+
+Measurement then made the case stronger than the scoring had. Two findings a list would not have
+caught: a dynamic fee is an unknown one, not a low one, and masking Uniswap V4's 0x800000 flag off
+reports the most dangerous pool on the chain as free; and a live Arc pool exposing the supposedly
+immutable fee() interface answered 400, then 450, then 460 within a day, which makes any off-chain
+check unsound. A fork test pins both blocks and asserts the movement.
+
+That finding also corrected me: two earlier readings of that pool, 420 and 430, had been treated as
+my own error and publicly "corrected". Neither was wrong. The pool was moving.
+
+Development was AI-assisted. Every figure was measured against Arc Mainnet, and the claims are
+executable — forge test runs 21 of them, including against the live chain.

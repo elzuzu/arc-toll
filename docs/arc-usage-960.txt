@@ -1,0 +1,7 @@
+ArcToll is a guard a router calls inside its own transaction: requireTollUnder(pool, maxPips) reads the pool's fee and reverts before a bad swap executes, and tollOn(pool, amount) prices the loss.
+
+On Arc that price is a dollar figure with no oracle in it, because USDC is both the quote asset and the unit of account. Elsewhere the same contract could only return a ratio.
+
+The problem is live here. Over 750 blocks of Uniswap V4 pool creation on Arc: 290 pools created, 9 with static fees of 50% or more (99%, 99%, 93%, 80%, 79%), and 3 whose fee a hook sets at swap time. V4 marks those with 0x800000; masking that flag off leaves zero, so a naive guard calls the most dangerous pool free.
+
+And a pool's fee can move. A live Arc pool exposing the immutable Uniswap V3 fee() interface answered 400 at block 21288698 and 450 at 21308698, same day. That makes an off-chain check unsound, which is why this is a revert and not a list.
